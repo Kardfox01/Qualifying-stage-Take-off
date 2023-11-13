@@ -11,17 +11,13 @@ def success(result):
 
 
 def task1():
-    assets_path = input(f"Введите путь до ассета: ")
+    assets_path = input(f"Введите путь до папки: ")
 
     if not os.path.isabs(assets_path):
         assets_path = os.path.join(os.getcwd(), assets_path)
 
-    if not os.path.exists(assets_path):
-        error("Ассета не существует!")
-        return
-
     if not os.path.isdir(assets_path):
-        error("Ассет не является папкой!")
+        error("Путь не является папкой!")
         return
 
     assets = os.listdir(assets_path)
