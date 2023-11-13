@@ -7,7 +7,8 @@ def error(text):
     print(f"{Fore.RED}{Style.BRIGHT}{text}")
 
 def success(result):
-    print(f"Результат: {Fore.GREEN}{Style.BRIGHT}{result}")
+    if result:
+        print(f"Результат: {Fore.GREEN}{Style.BRIGHT}{result}")
 
 
 def task1():
