@@ -19,18 +19,12 @@ def get_color_name(color):
         return "G"
     else:
         return "R"
+    
 
-def recognize_tags(image):
-    def filter_contours(contour):
-        area = cv2.contourArea(contour)
-        return area > 1000 and area <= 1000000
-
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    _, thresholded_image = cv2.threshold(gray_image, 120, 255, 0)
+def recognize_tags(image, thresholded_image, filter_funtion, names):
     contours, _ = cv2.findContours(thresholded_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    contours = list(filter(filter_contours, contours))
+    contours = list(filter(filter_funtion, contours))
 
-    names = []
     for contour in contours:
         M = cv2.moments(contour)
         center_x = int(M["m10"] / M["m00"])
@@ -44,8 +38,6 @@ def recognize_tags(image):
         cv2.putText(image, f"{color_name}{names.count(color_name)}", (center_x - 20, center_y - 20), cv2.FONT_HERSHEY_SIMPLEX, 3, (255, 255, 255), 4)
 
     image = cv2.drawContours(image, contours, -1, (255, 255, 255), 3)
-
-    return image
 
 
 def task1():
@@ -68,15 +60,55 @@ def task1():
 
 
 def task2():
+    def filter_contours(contour):
+        area = cv2.contourArea(contour)
+        return area > 1000 and area <= 1000000
+
     assets_path = "Task 2/"
     asset = os.listdir(assets_path)[0]
 
     image = cv2.imread(f"{assets_path}\\{asset}")
-    recognize_tags(image)
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, thresholded_image = cv2.threshold(gray_image, 110, 255, 0)
+
+    names = []
+    recognize_tags(image, thresholded_image, filter_contours, names)
 
     cv2.imshow(asset, image)
     cv2.waitKey(0)
     cv2.imwrite(f"{assets_path}\\SUCCESS_{asset}", image)
+
+
+def task3():
+    def filter_contours(contour):
+        area = cv2.contourArea(contour)
+        return area > 1000 and area <= 90000
+
+    assets_path = "Task 3/"
+    asset = os.listdir(assets_path)[0]
+
+    capture = cv2.VideoCapture(f"{assets_path}\\{asset}")
+    if not capture.isOpened():
+        error("Ошибка открытия видео!")
+
+    while capture.isOpened() and cv2.waitKey(25) & 0xFF != ord('q'):
+        success, frame = capture.read()
+        if success:
+            gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            _, thresholded_frame = cv2.threshold(gray_frame, 100, 255, 0)
+            contours, _ = cv2.findContours(thresholded_frame, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            contours = list(filter(filter_contours, contours))
+
+            names = []
+            recognize_tags(frame, thresholded_frame, filter_contours, names)
+
+            cv2.imshow(asset, frame)
+            cv2.waitKey(0)
+            print(names)
+            continue
+        break
+
+    capture.release()
 
 
 if __name__ == "__main__":
