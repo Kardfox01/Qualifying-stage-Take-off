@@ -1,15 +1,16 @@
 import os
 import cv2
-from colorama import Fore, Style, init
-from numpy import fromfile, uint8
+from colorama import Fore, Style
+from numpy import fromfile, uint8, invert, argmax
 
 
 def error(text):
-    print(f"{Fore.RED}{Style.BRIGHT}{text}")
+    print(f"{Fore.RED}{Style.BRIGHT}{text}{Style.RESET_ALL}")
+
 
 def success(result):
     if result:
-        print(f"Результат: {Fore.GREEN}{Style.BRIGHT}{result}")
+        print(f"Результат: {Fore.GREEN}{Style.BRIGHT}", *result, Style.RESET_ALL, sep="")
 
 
 def get_color_name(color):
@@ -20,18 +21,20 @@ def get_color_name(color):
         return "G"
     else:
         return "R"
-    
+
 
 def recognize_tags(image, thresholded_image, filter_funtion, image_center_x, image_center_y):
     contours, _ = cv2.findContours(thresholded_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     contours = list(filter(filter_funtion, contours))
     image = cv2.drawContours(image, contours, -1, (255, 255, 0), 3)
+    tags = []
 
     for contour in contours:
         M = cv2.moments(contour)
-        tag_center_x = int(M["m10"] / M["m00"])
-        tag_center_y = int(M["m01"] / M["m00"])
-        tag_name = f"{get_color_name(image[tag_center_y, tag_center_x])} ({tag_center_x - image_center_x}, {image_center_y - tag_center_y})"
+        tag_center_x = int(M["m10"] // M["m00"])
+        tag_center_y = int(M["m01"] // M["m00"])
+        tag_name = f"{get_color_name(image[tag_center_y, tag_center_x])}({tag_center_x - image_center_x}, {image_center_y - tag_center_y}) "
+        tags.append(tag_name)
 
         cv2.circle(image, (tag_center_x, tag_center_y), 6, (255, 255, 255), -1)
         cv2.putText(
@@ -44,12 +47,43 @@ def recognize_tags(image, thresholded_image, filter_funtion, image_center_x, ima
             2
         )
 
+    return tags
+
 
 def center(image):
     center_x, center_y = image.shape[1] // 2, image.shape[0] // 2
     cv2.circle(image, (center_x, center_y), 5, (100, 0, 255), -1)
 
     return (center_x, center_y)
+
+
+def task4():
+    assets_path = input(f"Введите путь до папки: ")
+    if not os.path.isabs(assets_path):
+        assets_path = os.path.join(os.getcwd(), assets_path)
+
+    if not os.path.isdir(assets_path):
+        error("Путь не является папкой!")
+        return
+
+    from keras.models import load_model
+
+    model = load_model(".model")
+
+    assets = os.listdir(assets_path)
+    numbers = []
+    for asset in assets:
+        image = cv2.imdecode(fromfile(f"{assets_path}\\{asset}", dtype=uint8), cv2.IMREAD_UNCHANGED)
+
+        if image.shape[:2] != (28, 28):
+            image = cv2.resize(image, (28, 28))[:, :, 0]
+
+        image = invert([image])
+        numbers.append(
+            argmax(model.predict(image))
+        )
+
+    return numbers
 
 
 def task3():
@@ -108,16 +142,16 @@ def task2():
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     _, thresholded_image = cv2.threshold(gray_image, 110, 255, 0)
 
-    recognize_tags(
+    tags = recognize_tags(
         image,
         thresholded_image,
         filter_contours,
         *center(image)
     )
 
-    # cv2.imshow(asset, image)
-    # cv2.waitKey(0)
     cv2.imwrite(f"{assets_path}\\SUCCESS_{asset}", image)
+
+    return tags
 
 
 def task1():
@@ -136,11 +170,10 @@ def task1():
         image = cv2.imdecode(fromfile(f"{assets_path}\\{asset}", dtype=uint8), cv2.IMREAD_UNCHANGED)
         colors.append(get_color_name(image[0, 0]))
 
-    return "".join(colors)
+    return colors
 
 
 if __name__ == "__main__":
-    init(autoreset=True)
     scope = globals()
 
     task = "task" + input(f"Какое задание выполнить? ")
